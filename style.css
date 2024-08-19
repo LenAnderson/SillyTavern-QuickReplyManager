@@ -1,0 +1,165 @@
+.stqrm--code {
+  font-family: var(--monoFontFamily);
+  tab-size: 4;
+  white-space: pre-wrap;
+}
+.stqrm--checkbox {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5em;
+}
+.stqrm--checkbox .stqrm--oldValue,
+.stqrm--checkbox .stqrm--arrow {
+  margin-right: -0.5em;
+}
+.stqrm--color {
+  height: 1em;
+  width: 2em;
+  border: 1px solid var(--SmartThemeBorderColor);
+  border-radius: 4px;
+}
+.stqrm--oldValue {
+  background-color: var(--d2h-dark-del-label-color);
+}
+.stqrm--newValue {
+  background-color: var(--d2h-dark-ins-label-color);
+}
+dialog.popup:has(.stqrm--importDlg) {
+  aspect-ratio: unset;
+  height: 95dvh;
+  width: 95dvw;
+}
+dialog.popup:has(.stqrm--importDlg) .popup-content {
+  display: flex;
+  flex-direction: column;
+}
+dialog.popup:has(.stqrm--importDlg) .popup-controls {
+  display: none;
+}
+.stqrm--importDlg {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  text-align: left;
+}
+.stqrm--form {
+  display: flex;
+  align-items: end;
+  gap: 1em;
+  flex: 0 0 auto;
+}
+.stqrm--form label {
+  flex: 1 1 auto;
+}
+.stqrm--form label .stqrm--text {
+  font-size: smaller;
+}
+.stqrm--head {
+  display: flex;
+  gap: 2em;
+  align-items: baseline;
+  background-color: var(--SmartThemeBlurTintColor);
+  border-top: 2px solid var(--SmartThemeBorderColor);
+  border-radius: 4px;
+  padding: 1.5em 0.5em 0.5em 0.5em;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+.stqrm--head .stqrm--label,
+.stqrm--head .stqrm--title {
+  position: relative;
+  height: 1lh;
+}
+.stqrm--head .stqrm--label::before,
+.stqrm--head .stqrm--title::before {
+  bottom: 100%;
+  font-size: 0.6em;
+  left: 0;
+  opacity: 0.4;
+  position: absolute;
+}
+.stqrm--head .stqrm--label::after,
+.stqrm--head .stqrm--title::after {
+  content: '\00a0';
+}
+.stqrm--head .stqrm--label::before {
+  content: 'Label:';
+}
+.stqrm--head .stqrm--title {
+  opacity: 0.75;
+}
+.stqrm--head .stqrm--title::before {
+  content: 'Title:';
+}
+.stqrm--config {
+  display: flex;
+  column-gap: 2em;
+  row-gap: 1.25em;
+  align-items: baseline;
+  flex-wrap: wrap;
+  margin-bottom: 1em;
+  padding: 0.5em;
+}
+.stqrm--qrs {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.stqrm--name {
+  font-size: 1.25em;
+  font-weight: bold;
+}
+.stqrm--list {
+  overflow: auto;
+  flex: 1 1 auto;
+  gap: 2em;
+  display: flex;
+  flex-direction: column;
+}
+.stqrm--qr {
+  border: 2px solid var(--SmartThemeBorderColor);
+  border-radius: 5px;
+}
+.stqrm--automationId,
+.stqrm--contextList {
+  position: relative;
+  height: 1lh;
+  min-width: 4em;
+}
+.stqrm--automationId::before,
+.stqrm--contextList::before {
+  bottom: 100%;
+  font-size: 0.6em;
+  left: 0;
+  opacity: 0.4;
+  position: absolute;
+  white-space: nowrap;
+}
+.stqrm--automationId::after,
+.stqrm--contextList::after {
+  content: '\00a0';
+}
+.stqrm--automationId::before {
+  content: 'Automation ID:';
+}
+.stqrm--contextList::before {
+  content: 'Context Menu:';
+}
+.stqrm--content {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.stqrm--actions {
+  flex: 1 1 auto;
+  display: flex;
+  gap: 1em;
+  justify-content: center;
+  align-items: end;
+}
+.d2h-code-wrapper .d2h-code-line-ctn.hljs.stscript {
+  background: none;
+}
