@@ -18,6 +18,14 @@
   border: 1px solid var(--SmartThemeBorderColor);
   border-radius: 4px;
 }
+.stqrm--color.stqrm--oldColor {
+  outline: 2px solid var(--d2h-dark-del-label-color);
+  outline-offset: 0.25em;
+}
+.stqrm--color.stqrm--newColor {
+  outline: 2px solid var(--d2h-dark-ins-label-color);
+  outline-offset: 0.25em;
+}
 .stqrm--oldValue {
   background-color: var(--d2h-dark-del-label-color);
 }

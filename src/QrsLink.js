@@ -142,8 +142,23 @@ export class QrsLink {
                 }
                 const color = document.createElement('div'); {
                     color.classList.add('stqrm--checkbox');
+                    if (diff && this.qrs && this.qrs.color != this.data.color) {
+                        const ocb = document.createElement('div'); {
+                            ocb.classList.add('stqrm--color');
+                            ocb.classList.add('stqrm--oldColor');
+                            ocb.style.backgroundColor = this.qrs.color ?? 'transparent';
+                            color.append(ocb);
+                        }
+                        const arrow = document.createElement('div'); {
+                            arrow.classList.add('stqrm--arrow');
+                            arrow.classList.add('fa-solid', 'fa-fw');
+                            arrow.classList.add('fa-arrow-right');
+                            color.append(arrow);
+                        }
+                    }
                     const cb = document.createElement('div'); {
                         cb.classList.add('stqrm--color');
+                        if (diff && this.qrs && this.qrs.color != this.data.color) cb.classList.add('stqrm--newColor');
                         cb.style.backgroundColor = this.data.color ?? 'transparent';
                         color.append(cb);
                     }
