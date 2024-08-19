@@ -52,7 +52,23 @@ export class QrsLink {
                 }
                 const disableSend = document.createElement('div'); {
                     disableSend.classList.add('stqrm--checkbox');
+                    if (diff && this.qrs && this.qrs.disableSend != this.data.disableSend) {
+                        const ocb = document.createElement('input'); {
+                            ocb.classList.add('stqrm--oldValue');
+                            ocb.type = 'checkbox';
+                            ocb.checked = this.qrs.disableSend;
+                            ocb.disabled = true;
+                            disableSend.append(ocb);
+                        }
+                        const arrow = document.createElement('div'); {
+                            arrow.classList.add('stqrm--arrow');
+                            arrow.classList.add('fa-solid', 'fa-fw');
+                            arrow.classList.add('fa-arrow-right');
+                            disableSend.append(arrow);
+                        }
+                    }
                     const cb = document.createElement('input'); {
+                        if (diff && this.qrs && this.qrs.disableSend != this.data.disableSend) cb.classList.add('stqrm--newValue');
                         cb.type = 'checkbox';
                         cb.checked = this.data.disableSend;
                         cb.disabled = true;
@@ -66,7 +82,23 @@ export class QrsLink {
                 }
                 const placeBeforeInput = document.createElement('div'); {
                     placeBeforeInput.classList.add('stqrm--checkbox');
+                    if (diff && this.qrs && this.qrs.placeBeforeInput != this.data.placeBeforeInput) {
+                        const ocb = document.createElement('input'); {
+                            ocb.classList.add('stqrm--oldValue');
+                            ocb.type = 'checkbox';
+                            ocb.checked = this.qrs.placeBeforeInput;
+                            ocb.disabled = true;
+                            placeBeforeInput.append(ocb);
+                        }
+                        const arrow = document.createElement('div'); {
+                            arrow.classList.add('stqrm--arrow');
+                            arrow.classList.add('fa-solid', 'fa-fw');
+                            arrow.classList.add('fa-arrow-right');
+                            placeBeforeInput.append(arrow);
+                        }
+                    }
                     const cb = document.createElement('input'); {
+                        if (diff && this.qrs && this.qrs.placeBeforeInput != this.data.placeBeforeInput) cb.classList.add('stqrm--newValue');
                         cb.type = 'checkbox';
                         cb.checked = this.data.placeBeforeInput;
                         cb.disabled = true;
@@ -80,7 +112,23 @@ export class QrsLink {
                 }
                 const injectInput = document.createElement('div'); {
                     injectInput.classList.add('stqrm--checkbox');
+                    if (diff && this.qrs && this.qrs.injectInput != this.data.injectInput) {
+                        const ocb = document.createElement('input'); {
+                            ocb.classList.add('stqrm--oldValue');
+                            ocb.type = 'checkbox';
+                            ocb.checked = this.qrs.injectInput;
+                            ocb.disabled = true;
+                            injectInput.append(ocb);
+                        }
+                        const arrow = document.createElement('div'); {
+                            arrow.classList.add('stqrm--arrow');
+                            arrow.classList.add('fa-solid', 'fa-fw');
+                            arrow.classList.add('fa-arrow-right');
+                            injectInput.append(arrow);
+                        }
+                    }
                     const cb = document.createElement('input'); {
+                        if (diff && this.qrs && this.qrs.injectInput != this.data.injectInput) cb.classList.add('stqrm--newValue');
                         cb.type = 'checkbox';
                         cb.checked = this.data.injectInput;
                         cb.disabled = true;
@@ -107,7 +155,23 @@ export class QrsLink {
                 }
                 const onlyBorderColor = document.createElement('div'); {
                     onlyBorderColor.classList.add('stqrm--checkbox');
+                    if (diff && this.qrs && this.qrs.onlyBorderColor != this.data.onlyBorderColor) {
+                        const ocb = document.createElement('input'); {
+                            ocb.classList.add('stqrm--oldValue');
+                            ocb.type = 'checkbox';
+                            ocb.checked = this.qrs.onlyBorderColor;
+                            ocb.disabled = true;
+                            onlyBorderColor.append(ocb);
+                        }
+                        const arrow = document.createElement('div'); {
+                            arrow.classList.add('stqrm--arrow');
+                            arrow.classList.add('fa-solid', 'fa-fw');
+                            arrow.classList.add('fa-arrow-right');
+                            onlyBorderColor.append(arrow);
+                        }
+                    }
                     const cb = document.createElement('input'); {
+                        if (diff && this.qrs && this.qrs.onlyBorderColor != this.data.onlyBorderColor) cb.classList.add('stqrm--newValue');
                         cb.type = 'checkbox';
                         cb.checked = this.data.onlyBorderColor;
                         cb.disabled = true;
