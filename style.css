@@ -189,6 +189,12 @@ dialog.popup:has(.stqrm--importDlg, .stqrm--manager):has(.stqrm--importDlg) .pop
   display: flex;
   flex-direction: column;
 }
+.stqrm--manager .stqrm--config {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 2em;
+  font-size: small;
+}
 .stqrm--manager .stqrm--config .stqrm--item {
   display: flex;
   gap: 3em;
