@@ -3,13 +3,25 @@ import { QuickReplySet } from '../../../quick-reply/src/QuickReplySet.js';
 import { proxyFetch } from '../lib/fetch.js';
 
 export class QrsLink {
+    static from(props) {
+        const instance = Object.assign(new this(), props);
+        instance.linkedQrs = instance.qrs;
+        return instance;
+    }
+
+
+
+
     /**@type {string} */ url;
     /**@type {string} */ name;
     /**@type {number} */ checkedOnTimestamp;
+    /**@type {number} */ updatedOnTimestamp;
 
     /**@type {QuickReplySet} */ data;
+    /**@type {QuickReplySet} */ linkedQrs;
 
     get checkedOn() { return new Date(this.checkedOnTimestamp); }
+    get updatedOn() { return new Date(this.updatedOnTimestamp); }
 
     get qrs() { return quickReplyApi.getSetByName(this.name ?? this.data?.name); }
 
@@ -21,6 +33,7 @@ export class QrsLink {
             url: this.url,
             name: this.name,
             checkedOnTimestamp: this.checkedOnTimestamp,
+            updatedOnTimestamp: this.updatedOnTimestamp,
         };
     }
 
@@ -30,6 +43,11 @@ export class QrsLink {
     async fetch() {
         this.data = JSON.parse(await proxyFetch(this.url));
         return this.data;
+    }
+
+    async checkForUpdate() {
+        await this.fetch();
+        return JSON.stringify(this.data) != JSON.stringify(this.qrs);
     }
 
     verify() {
@@ -208,14 +226,14 @@ export class QrsLink {
                         wrap.classList.add('stqrm--qr');
                         const head = document.createElement('div'); {
                             head.classList.add('stqrm--head');
-                            if (qr.icon) {
+                            if (qr.icon || oqr?.icon) {
                                 const icon = document.createElement('div'); {
                                     icon.classList.add('stqrm--icon');
-                                    if (diff && oqr && oqr.automationId != qr.automationId) {
+                                    if (diff && oqr && oqr.icon != qr.icon) {
                                         const del = document.createElement('del'); {
-                                            del.classList.add('stqrm--oldValue');
+                                            del.classList.add('stqrm--oldIcon');
                                             del.classList.add('fa-solid');
-                                            del.classList.add(oqr.icon);
+                                            if (oqr.icon) del.classList.add(oqr.icon);
                                             icon.append(del);
                                         }
                                         const arrow = document.createElement('div'); {
@@ -225,9 +243,9 @@ export class QrsLink {
                                             icon.append(arrow);
                                         }
                                         const ins = document.createElement('ins'); {
-                                            ins.classList.add('stqrm--newValue');
+                                            ins.classList.add('stqrm--newIcon');
                                             ins.classList.add('fa-solid');
-                                            ins.classList.add(qr.icon);
+                                            if (qr.icon) ins.classList.add(qr.icon);
                                             icon.append(ins);
                                         }
                                     } else {

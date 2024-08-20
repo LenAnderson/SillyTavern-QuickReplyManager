@@ -1,3 +1,7 @@
+.stqrm--disabled {
+  pointer-events: none;
+  opacity: 0.5;
+}
 .stqrm--code {
   font-family: var(--monoFontFamily);
   tab-size: 4;
@@ -11,6 +15,14 @@
 .stqrm--checkbox .stqrm--oldValue,
 .stqrm--checkbox .stqrm--arrow {
   margin-right: -0.5em;
+}
+.stqrm--icon .stqrm--oldIcon {
+  outline: 2px solid var(--d2h-dark-del-label-color);
+  outline-offset: 0.25em;
+}
+.stqrm--icon .stqrm--newIcon {
+  outline: 2px solid var(--d2h-dark-ins-label-color);
+  outline-offset: 0.25em;
 }
 .stqrm--color {
   height: 1em;
@@ -32,16 +44,16 @@
 .stqrm--newValue {
   background-color: var(--d2h-dark-ins-label-color);
 }
-dialog.popup:has(.stqrm--importDlg) {
+dialog.popup:has(.stqrm--importDlg, .stqrm--manager) {
   aspect-ratio: unset;
   height: 95dvh;
   width: 95dvw;
 }
-dialog.popup:has(.stqrm--importDlg) .popup-content {
+dialog.popup:has(.stqrm--importDlg, .stqrm--manager) .popup-content {
   display: flex;
   flex-direction: column;
 }
-dialog.popup:has(.stqrm--importDlg) .popup-controls {
+dialog.popup:has(.stqrm--importDlg, .stqrm--manager):has(.stqrm--importDlg) .popup-controls {
   display: none;
 }
 .stqrm--importDlg {
@@ -51,19 +63,19 @@ dialog.popup:has(.stqrm--importDlg) .popup-controls {
   overflow: hidden;
   text-align: left;
 }
-.stqrm--form {
+.stqrm--importDlg .stqrm--form {
   display: flex;
   align-items: end;
   gap: 1em;
   flex: 0 0 auto;
 }
-.stqrm--form label {
+.stqrm--importDlg .stqrm--form label {
   flex: 1 1 auto;
 }
-.stqrm--form label .stqrm--text {
+.stqrm--importDlg .stqrm--form label .stqrm--text {
   font-size: smaller;
 }
-.stqrm--head {
+.stqrm--importDlg .stqrm--head {
   display: flex;
   gap: 2em;
   align-items: baseline;
@@ -75,33 +87,33 @@ dialog.popup:has(.stqrm--importDlg) .popup-controls {
   top: 0;
   z-index: 1;
 }
-.stqrm--head .stqrm--label,
-.stqrm--head .stqrm--title {
+.stqrm--importDlg .stqrm--head .stqrm--label,
+.stqrm--importDlg .stqrm--head .stqrm--title {
   position: relative;
   height: 1lh;
 }
-.stqrm--head .stqrm--label::before,
-.stqrm--head .stqrm--title::before {
+.stqrm--importDlg .stqrm--head .stqrm--label::before,
+.stqrm--importDlg .stqrm--head .stqrm--title::before {
   bottom: 100%;
   font-size: 0.6em;
   left: 0;
   opacity: 0.4;
   position: absolute;
 }
-.stqrm--head .stqrm--label::after,
-.stqrm--head .stqrm--title::after {
+.stqrm--importDlg .stqrm--head .stqrm--label::after,
+.stqrm--importDlg .stqrm--head .stqrm--title::after {
   content: '\00a0';
 }
-.stqrm--head .stqrm--label::before {
+.stqrm--importDlg .stqrm--head .stqrm--label::before {
   content: 'Label:';
 }
-.stqrm--head .stqrm--title {
+.stqrm--importDlg .stqrm--head .stqrm--title {
   opacity: 0.75;
 }
-.stqrm--head .stqrm--title::before {
+.stqrm--importDlg .stqrm--head .stqrm--title::before {
   content: 'Title:';
 }
-.stqrm--config {
+.stqrm--importDlg .stqrm--config {
   display: flex;
   column-gap: 2em;
   row-gap: 1.25em;
@@ -110,34 +122,34 @@ dialog.popup:has(.stqrm--importDlg) .popup-controls {
   margin-bottom: 1em;
   padding: 0.5em;
 }
-.stqrm--qrs {
+.stqrm--importDlg .stqrm--qrs {
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
-.stqrm--name {
+.stqrm--importDlg .stqrm--name {
   font-size: 1.25em;
   font-weight: bold;
 }
-.stqrm--list {
+.stqrm--importDlg .stqrm--list {
   overflow: auto;
   flex: 1 1 auto;
   gap: 2em;
   display: flex;
   flex-direction: column;
 }
-.stqrm--qr {
+.stqrm--importDlg .stqrm--qr {
   border: 2px solid var(--SmartThemeBorderColor);
   border-radius: 5px;
 }
-.stqrm--automationId,
-.stqrm--contextList {
+.stqrm--importDlg .stqrm--automationId,
+.stqrm--importDlg .stqrm--contextList {
   position: relative;
   height: 1lh;
   min-width: 4em;
 }
-.stqrm--automationId::before,
-.stqrm--contextList::before {
+.stqrm--importDlg .stqrm--automationId::before,
+.stqrm--importDlg .stqrm--contextList::before {
   bottom: 100%;
   font-size: 0.6em;
   left: 0;
@@ -145,29 +157,102 @@ dialog.popup:has(.stqrm--importDlg) .popup-controls {
   position: absolute;
   white-space: nowrap;
 }
-.stqrm--automationId::after,
-.stqrm--contextList::after {
+.stqrm--importDlg .stqrm--automationId::after,
+.stqrm--importDlg .stqrm--contextList::after {
   content: '\00a0';
 }
-.stqrm--automationId::before {
+.stqrm--importDlg .stqrm--automationId::before {
   content: 'Automation ID:';
 }
-.stqrm--contextList::before {
+.stqrm--importDlg .stqrm--contextList::before {
   content: 'Context Menu:';
 }
-.stqrm--content {
+.stqrm--importDlg .stqrm--content {
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
-.stqrm--actions {
+.stqrm--importDlg .stqrm--actions {
   flex: 1 1 auto;
   display: flex;
   gap: 1em;
   justify-content: center;
   align-items: end;
 }
-.d2h-code-wrapper .d2h-code-line-ctn.hljs.stscript {
+.stqrm--importDlg .d2h-code-wrapper .d2h-code-line-ctn.hljs.stscript {
   background: none;
+}
+.stqrm--manager {
+  flex: 1 1 auto;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.stqrm--manager .stqrm--config .stqrm--item {
+  display: flex;
+  gap: 3em;
+  align-items: center;
+}
+.stqrm--manager .stqrm--config .stqrm--item .text_pole {
+  width: auto;
+}
+.stqrm--manager .stqrm--content {
+  flex: 1 1 auto;
+  overflow: auto;
+}
+.stqrm--manager .stqrm--qrsTable {
+  border: 0;
+  border-collapse: collapse;
+  border-spacing: 0;
+  text-align: left;
+  white-space: nowrap;
+  width: 100%;
+}
+.stqrm--manager .stqrm--qrsTable thead {
+  background-color: var(--SmartThemeBlurTintColor);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+.stqrm--manager .stqrm--qrsTable tr {
+  border-bottom: 5px solid var(--SmartThemeBorderColor);
+  transition: 200ms;
+  background-color: var(--primaryBgCol, var(--SmartThemeBlurTintColor));
+}
+.stqrm--manager .stqrm--qrsTable tr:hover {
+  background-color: color-mix(in srgb, var(--SmartThemeQuoteColor) 50%, transparent 50%);
+}
+.stqrm--manager .stqrm--qrsTable th,
+.stqrm--manager .stqrm--qrsTable td {
+  text-align: left;
+  padding: 0 1em;
+}
+.stqrm--manager .stqrm--qrsTable .stqrm--numeric {
+  text-align: right;
+}
+.stqrm--manager .stqrm--qrsTable .stqrm--main {
+  font-size: smaller;
+  opacity: 0.5;
+  position: relative;
+  width: 99%;
+}
+.stqrm--manager .stqrm--qrsTable .stqrm--main .stqrm--wrap {
+  display: flex;
+  align-items: center;
+  bottom: 0;
+  left: 0;
+  position: absolute;
+  right: 0;
+  top: 0;
+}
+.stqrm--manager .stqrm--qrsTable .stqrm--main .stqrm--wrap :first-child {
+  flex: 0 1 auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.stqrm--manager .stqrm--qrsTable .stqrm--actions {
+  display: flex;
+  gap: 0.5em;
 }
