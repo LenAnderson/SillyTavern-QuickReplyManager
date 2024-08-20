@@ -568,6 +568,8 @@ const addToAdders = ()=>{
                                                             link.checkedOnTimestamp = Date.now();
                                                             settings.save();
                                                         }
+                                                        checked.textContent = link?.checkedOn?.toLocaleString() ?? '';
+                                                        updated.textContent = link?.updatedOn?.toLocaleString() ?? '';
                                                     });
                                                     wrap.append(update);
                                                 }
