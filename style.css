@@ -203,6 +203,10 @@ dialog.popup:has(.stqrm--importDlg, .stqrm--manager):has(.stqrm--importDlg) .pop
 .stqrm--manager .stqrm--config .stqrm--item .text_pole {
   width: auto;
 }
+.stqrm--manager .stqrm--config .stqrm--actions {
+  display: flex;
+  gap: 1em;
+}
 .stqrm--manager .stqrm--content {
   flex: 1 1 auto;
   overflow: auto;
@@ -237,11 +241,44 @@ dialog.popup:has(.stqrm--importDlg, .stqrm--manager):has(.stqrm--importDlg) .pop
 .stqrm--manager .stqrm--qrsTable .stqrm--numeric {
   text-align: right;
 }
+.stqrm--manager .stqrm--qrsTable .stqrm--nameWrap {
+  display: flex;
+  gap: 2em;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.stqrm--manager .stqrm--qrsTable .stqrm--nameWrap .menu_button {
+  margin-right: -1em;
+}
+.stqrm--manager .stqrm--qrsTable .stqrm--name {
+  cursor: pointer;
+}
+.stqrm--manager .stqrm--qrsTable .stqrm--name:hover {
+  text-decoration: underline;
+}
+.stqrm--manager .stqrm--qrsTable .stqrm--count {
+  cursor: help;
+}
 .stqrm--manager .stqrm--qrsTable .stqrm--main {
   font-size: smaller;
   opacity: 0.5;
   position: relative;
   width: 99%;
+  transition: 200ms;
+}
+.stqrm--manager .stqrm--qrsTable .stqrm--main.stqrm--hasUrl {
+  cursor: pointer;
+}
+.stqrm--manager .stqrm--qrsTable .stqrm--main.stqrm--hasUrl:hover {
+  opacity: 1;
+}
+.stqrm--manager .stqrm--qrsTable .stqrm--main.stqrm--success {
+  background-color: #51a351;
+  opacity: 1;
+}
+.stqrm--manager .stqrm--qrsTable .stqrm--main.stqrm--failure {
+  background-color: #bd362f;
+  opacity: 1;
 }
 .stqrm--manager .stqrm--qrsTable .stqrm--main .stqrm--wrap {
   display: flex;

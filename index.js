@@ -1,6 +1,6 @@
 import { event_types, eventSource } from '../../../../script.js';
 import { extension_settings } from '../../../extensions.js';
-import { Popup, POPUP_TYPE } from '../../../popup.js';
+import { Popup, POPUP_RESULT, POPUP_TYPE } from '../../../popup.js';
 import { SlashCommand } from '../../../slash-commands/SlashCommand.js';
 import { SlashCommandParser } from '../../../slash-commands/SlashCommandParser.js';
 import { delay } from '../../../utils.js';
@@ -15,6 +15,9 @@ import { Settings } from './src/Settings.js';
 
 /**@type {Settings} */
 let settings;
+
+/**@type {HTMLElement} */
+let qrsTbody;
 
 
 
@@ -151,6 +154,316 @@ const notifyUpdate = async(updateList) => {
     }
 };
 
+const updateQrsTable = ()=>{
+    [...qrsTbody.children].forEach(it=>it.remove());
+    for (const qrs of QuickReplySet.list.toSorted((a,b)=>a.name.toLowerCase().localeCompare(b.name.toLowerCase()))) {
+        qrsTbody.append(makeQrsRow(qrs));
+    }
+};
+/**
+ *
+ * @param {QuickReplySet} qrs
+ * @returns
+ */
+const makeQrsRow = (qrs)=>{
+    const link = settings.qrsLinkList.find(it=>it.linkedQrs == qrs);
+    const tr = document.createElement('tr'); {
+        const name = document.createElement('td'); {
+            const wrap = document.createElement('div'); {
+                wrap.classList.add('stqrm--nameWrap');
+                const txt = document.createElement('div'); {
+                    txt.classList.add('stqrm--name');
+                    txt.textContent = qrs.name;
+                    txt.addEventListener('click', async()=>{
+                        const refresh = await showSetManager(qrs);
+                        if (!refresh) return;
+                        updateQrsTable();
+                    });
+                    wrap.append(txt);
+                }
+                const btn = document.createElement('div'); {
+                    btn.classList.add('menu_button');
+                    btn.classList.add('fa-solid', 'fa-fw', 'fa-pencil');
+                    btn.title = 'Change name';
+                    let isEditing = false;
+                    let listener;
+                    const stopEditing = ()=>{
+                        txt.removeEventListener('keydown', listener);
+                        txt.removeAttribute('contenteditable');
+                        isEditing = false;
+                        if (qrs.name != txt.textContent.trim()) {
+                            //TODO QR offers no way of renaming a set?
+                        }
+                    };
+                    btn.addEventListener('click', async(evt)=>{
+                        if (isEditing) {
+                            stopEditing();
+                            return;
+                        }
+                        isEditing = true;
+                        txt.contentEditable = 'plaintext-only';
+                        txt.focus();
+                        const range = document.createRange();
+                        range.selectNodeContents(txt);
+                        const sel = window.getSelection();
+                        sel.removeAllRanges();
+                        sel.addRange(range);
+                        listener = async(evt)=>{
+                            evt.stopPropagation();
+                            if (evt.shiftKey || evt.altKey || evt.ctrlKey || evt.key != 'Enter') return;
+                            stopEditing();
+                        };
+                        txt.addEventListener('keydown', listener);
+                    });
+                    // wrap.append(btn);
+                }
+                name.append(wrap);
+            }
+            tr.append(name);
+        }
+        const count = document.createElement('td'); {
+            count.classList.add('stqrm--count');
+            count.classList.add('stqrm--numeric');
+            count.textContent = qrs.qrList.length.toString();
+            count.title = qrs.qrList.map(it=>it.label || it.title || it.icon || '???').join('\n');
+            tr.append(count);
+        }
+        const url = document.createElement('td'); {
+            url.classList.add('stqrm--main');
+            if (link) {
+                url.classList.add('stqrm--hasUrl');
+                let u = link?.url ?? '';
+                url.title = `${u}\n---\nClick to copy URL`;
+                url.addEventListener('click', async()=>{
+                    let failed = false;
+                    try {
+                        navigator.clipboard.writeText(u.toString());
+                    } catch {
+                        console.warn('/copy cannot use clipboard API, falling back to execCommand');
+                        const ta = document.createElement('textarea'); {
+                            ta.value = u.toString();
+                            ta.style.position = 'fixed';
+                            ta.style.inset = '0';
+                            document.body.append(ta);
+                            ta.focus();
+                            ta.select();
+                            try {
+                                document.execCommand('copy');
+                            } catch (err) {
+                                console.error('Unable to copy to clipboard', err);
+                                failed = true;
+                            }
+                            ta.remove();
+                        }
+                    }
+                    if (failed) {
+                        url.classList.add('stqrm--failure');
+                    } else {
+                        url.classList.add('stqrm--success');
+                    }
+                    await delay(1000);
+                    url.classList.remove('stqrm--failure', 'stqrm--success');
+                });
+                const wrap = document.createElement('span'); {
+                    wrap.classList.add('stqrm--wrap');
+                    const first = document.createElement('span'); {
+                        first.textContent = u.split('/').slice(0,-1).join('/');
+                        wrap.append(first);
+                    }
+                    const last = document.createElement('span'); {
+                        last.textContent = u.split('/').pop();
+                        wrap.append(last);
+                    }
+                    url.append(wrap);
+                }
+            }
+            tr.append(url);
+        }
+        const updated = document.createElement('td'); {
+            updated.textContent = link?.updatedOn?.toLocaleString() ?? '';
+            tr.append(updated);
+        }
+        const checked = document.createElement('td'); {
+            checked.textContent = link?.checkedOn?.toLocaleString() ?? '';
+            tr.append(checked);
+        }
+        const actions = document.createElement('td'); {
+            const wrap = document.createElement('div'); {
+                wrap.classList.add('stqrm--actions');
+                const update = document.createElement('div'); {
+                    update.classList.add('stqrm--action');
+                    if (!link) update.classList.add('stqrm--disabled');
+                    update.classList.add('menu_button');
+                    update.classList.add('fa-solid', 'fa-fw');
+                    update.classList.add('fa-arrow-left-rotate');
+                    update.title = 'Check for updates';
+                    update.addEventListener('click', async()=>{
+                        const hasUpdate = await link.checkForUpdate();
+                        if (hasUpdate) {
+                            /**@type {HTMLElement} */
+                            let actionsWrap;
+                            const dom = document.createElement('div'); {
+                                dom.classList.add('stqrm--importDlg');
+                                const title = document.createElement('h3'); {
+                                    const text = document.createElement('span'); {
+                                        text.textContent = 'Update Quick Reply Set';
+                                        title.append(text);
+                                    }
+                                    dom.append(title);
+                                }
+                                const content = document.createElement('div'); {
+                                    content.classList.add('stqrm--content');
+                                    const actions = document.createElement('div'); {
+                                        actionsWrap = actions;
+                                        actions.classList.add('stqrm--actions');
+                                        const cancel = document.createElement('div'); {
+                                            cancel.classList.add('menu_button');
+                                            cancel.textContent = 'Cancel';
+                                            cancel.addEventListener('click', ()=>dlg.completeCancelled());
+                                            actions.append(cancel);
+                                        }
+                                        content.append(actions);
+                                    }
+                                    dom.append(content);
+                                }
+                            }
+                            if (link.qrs) {
+                                actionsWrap.insertAdjacentElement('beforebegin', link.render(true));
+                                const impBtn = document.createElement('div'); {
+                                    impBtn.classList.add('menu_button');
+                                    impBtn.textContent = 'Update';
+                                    impBtn.addEventListener('click', async()=>{
+                                        const inp = /**@type {HTMLInputElement}*/(document.querySelector('#qr--set-importFile'));
+                                        const blob = new Blob([JSON.stringify(link.data)], { type: 'application/json' });
+                                        const file = new File([blob], `${link.data.name}.qrs.json`);
+                                        const container = new DataTransfer();
+                                        container.items.add(file);
+                                        inp.files = container.files;
+                                        inp.dispatchEvent(new Event('change', { bubbles:true }));
+                                        const pop = document.querySelector('#shadow_popup');
+                                        while (pop.style.display != 'block') await delay(10);
+                                        document.querySelector('#dialogue_popup_ok').click();
+                                        dlg.completeAffirmative();
+                                        link.checkedOnTimestamp = Date.now();
+                                        link.name = link.data.name;
+                                        while (quickReplyApi.getSetByName(link.name) == link.linkedQrs) await delay(100);
+                                        link.linkedQrs = quickReplyApi.getSetByName(link.name);
+                                        link.updatedOnTimestamp = Date.now();
+                                        settings.save();
+                                    });
+                                    actionsWrap.prepend(impBtn);
+                                }
+                            } else {
+                                actionsWrap.insertAdjacentElement('beforebegin', link.render());
+                                const impBtn = document.createElement('div'); {
+                                    impBtn.classList.add('menu_button');
+                                    impBtn.textContent = 'Import';
+                                    impBtn.addEventListener('click', async()=>{
+                                        const inp = /**@type {HTMLInputElement}*/(document.querySelector('#qr--set-importFile'));
+                                        const blob = new Blob([JSON.stringify(link.data)], { type: 'application/json' });
+                                        const file = new File([blob], `${link.data.name}.qrs.json`);
+                                        const container = new DataTransfer();
+                                        container.items.add(file);
+                                        inp.files = container.files;
+                                        inp.dispatchEvent(new Event('change', { bubbles:true }));
+                                        dlg.completeAffirmative();
+                                        link.checkedOnTimestamp = Date.now();
+                                        link.name = link.data.name;
+                                        while (quickReplyApi.getSetByName(link.name) == link.linkedQrs) await delay(100);
+                                        link.linkedQrs = quickReplyApi.getSetByName(link.name);
+                                        link.updatedOnTimestamp = Date.now();
+                                        settings.qrsLinkList.push(link);
+                                        settings.save();
+                                    });
+                                    actionsWrap.prepend(impBtn);
+                                }
+                            }
+                            const dlg = new Popup(
+                                dom,
+                                POPUP_TYPE.TEXT,
+                            );
+                            await dlg.show();
+                        } else {
+                            toastr.info(`No updates for ${qrs.name}`, 'Quick Reply Manager');
+                            link.checkedOnTimestamp = Date.now();
+                            settings.save();
+                        }
+                        checked.textContent = link?.checkedOn?.toLocaleString() ?? '';
+                        updated.textContent = link?.updatedOn?.toLocaleString() ?? '';
+                    });
+                    wrap.append(update);
+                }
+                const copy = document.createElement('div'); {
+                    copy.classList.add('stqrm--action');
+                    copy.classList.add('menu_button');
+                    copy.classList.add('fa-solid', 'fa-fw');
+                    copy.classList.add('fa-clipboard');
+                    copy.title = 'Copy Quick Reply Set to clipboard';
+                    copy.addEventListener('click', async()=>{
+                        const value = JSON.stringify(qrs, null, '\t');
+                        try {
+                            navigator.clipboard.writeText(value.toString());
+                            toastr.success(`Quick Reply Set copied to clipboard: ${qrs.name}`, 'Quick Reply Manager');
+                        } catch {
+                            console.warn('/copy cannot use clipboard API, falling back to execCommand');
+                            const ta = document.createElement('textarea'); {
+                                ta.value = value.toString();
+                                ta.style.position = 'fixed';
+                                ta.style.inset = '0';
+                                document.body.append(ta);
+                                ta.focus();
+                                ta.select();
+                                try {
+                                    document.execCommand('copy');
+                                    toastr.success(`Quick Reply Set copied to clipboard: ${qrs.name}`, 'Quick Reply Manager');
+                                } catch (err) {
+                                    console.error('Unable to copy to clipboard', err);
+                                    toastr.error('Unable to copy to clipboard', 'Quick Reply Manager');
+                                }
+                                ta.remove();
+                            }
+                        }
+                    });
+                    wrap.append(copy);
+                }
+                const exp = document.createElement('div'); {
+                    exp.classList.add('stqrm--action');
+                    exp.classList.add('menu_button');
+                    exp.classList.add('fa-solid', 'fa-fw');
+                    exp.classList.add('fa-file-export');
+                    exp.title = 'Export Quick Reply Set';
+                    exp.addEventListener('click', async()=>{
+                        const sel = /**@type {HTMLSelectElement} */(document.querySelector('#qr--set'));
+                        sel.value = qrs.name;
+                        sel.dispatchEvent(new Event('change', { bubbles:true }));
+                        document.querySelector('#qr--set-export').click();
+                    });
+                    wrap.append(exp);
+                }
+                const del = document.createElement('div'); {
+                    del.classList.add('stqrm--action');
+                    del.classList.add('menu_button');
+                    del.classList.add('redWarningBG');
+                    del.classList.add('fa-solid', 'fa-fw');
+                    del.classList.add('fa-trash-can');
+                    del.title = 'Delete Quick Reply Set';
+                    del.addEventListener('click', async()=>{
+                        const confirmed = await Popup.show.confirm('Delete Quick Reply Set', `Are you sure you want to delete the Quick Reply Set "${qrs.name}"?<br>This cannot be undone.`);
+                        if (confirmed) {
+                            quickReplyApi.deleteSet(qrs.name);
+                            tr.remove();
+                        }
+                    });
+                    wrap.append(del);
+                }
+                actions.append(wrap);
+            }
+            tr.append(actions);
+        }
+    }
+    return tr;
+};
+
 const showManager = async()=>{
     const dom = document.createElement('div'); {
         dom.classList.add('stqrm--manager');
@@ -201,6 +514,46 @@ const showManager = async()=>{
                     uplaunch.append(time);
                 }
                 config.append(uplaunch);
+            }
+            const actions = document.createElement('div'); {
+                actions.classList.add('stqrm--actions');
+                const add = document.createElement('div'); {
+                    add.classList.add('menu_button');
+                    add.classList.add('fa-solid', 'fa-fw', 'fa-plus');
+                    add.title = 'Create new Quick Reply Set';
+                    add.addEventListener('click', async()=>{
+                        const name = await Popup.show.input('Create Quick Reply Set', 'Quick Reply Set Name:');
+                        if (name && name.length > 0) {
+                            const oldQrs = QuickReplySet.get(name);
+                            if (oldQrs) {
+                                await Popup.show.text('Quick Reply Set aready exists', `A Quick Reply Set named "${name}" already exists.`);
+                            } else {
+                                const qrs = await quickReplyApi.createSet(name);
+                                const before = quickReplyApi.listSets().findIndex(it=>it.toLowerCase().localeCompare(qrs.name.toLowerCase()) > 0);
+                                const row = makeQrsRow(qrs);
+                                if (before == -1) {
+                                    qrsTbody.append(row);
+                                } else {
+                                    qrsTbody.children[before].insertAdjacentElement('beforebegin', row);
+                                }
+                            }
+                        }
+                    });
+                    actions.append(add);
+                }
+                const importSetBtn = document.createElement('div'); {
+                    importSetBtn.classList.add('stqrm--import');
+                    importSetBtn.classList.add('menu_button');
+                    importSetBtn.classList.add('fa-solid', 'fa-cloud-arrow-down');
+                    importSetBtn.title = 'Import Quick Reply Set from external source';
+                    importSetBtn.addEventListener('click', async()=>{
+                        const refresh = await showImport();
+                        if (!refresh) return;
+                        updateQrsTable();
+                    });
+                    actions.append(importSetBtn);
+                }
+                config.append(actions);
             }
             const upiv = document.createElement('div'); {
                 upiv.classList.add('stqrm--item');
@@ -263,220 +616,8 @@ const showManager = async()=>{
                     tbl.append(thead);
                 }
                 const tbody = document.createElement('tbody'); {
-                    for (const qrs of QuickReplySet.list) {
-                        const link = settings.qrsLinkList.find(it=>it.linkedQrs == qrs);
-                        const tr = document.createElement('tr'); {
-                            const name = document.createElement('td'); {
-                                name.textContent = qrs.name;
-                                tr.append(name);
-                            }
-                            const count = document.createElement('td'); {
-                                count.classList.add('stqrm--numeric');
-                                count.textContent = qrs.qrList.length.toString();
-                                tr.append(count);
-                            }
-                            const url = document.createElement('td'); {
-                                url.classList.add('stqrm--main');
-                                let u = link?.url ?? '';
-                                url.title = u;
-                                const wrap = document.createElement('span'); {
-                                    wrap.classList.add('stqrm--wrap');
-                                    const first = document.createElement('span'); {
-                                        first.textContent = u.split('/').slice(0,-1).join('/');
-                                        wrap.append(first);
-                                    }
-                                    const last = document.createElement('span'); {
-                                        last.textContent = u.split('/').pop();
-                                        wrap.append(last);
-                                    }
-                                    url.append(wrap);
-                                }
-                                tr.append(url);
-                            }
-                            const updated = document.createElement('td'); {
-                                updated.textContent = link?.updatedOn?.toLocaleString() ?? '';
-                                tr.append(updated);
-                            }
-                            const checked = document.createElement('td'); {
-                                checked.textContent = link?.checkedOn?.toLocaleString() ?? '';
-                                tr.append(checked);
-                            }
-                            const actions = document.createElement('td'); {
-                                const wrap = document.createElement('div'); {
-                                    wrap.classList.add('stqrm--actions');
-                                    const update = document.createElement('div'); {
-                                        update.classList.add('stqrm--action');
-                                        if (!link) update.classList.add('stqrm--disabled');
-                                        update.classList.add('menu_button');
-                                        update.classList.add('fa-solid', 'fa-fw');
-                                        update.classList.add('fa-arrow-left-rotate');
-                                        update.title = 'Check for updates';
-                                        update.addEventListener('click', async()=>{
-                                            const hasUpdate = await link.checkForUpdate();
-                                            if (hasUpdate) {
-                                                /**@type {HTMLElement} */
-                                                let actionsWrap;
-                                                const dom = document.createElement('div'); {
-                                                    dom.classList.add('stqrm--importDlg');
-                                                    const title = document.createElement('h3'); {
-                                                        const text = document.createElement('span'); {
-                                                            text.textContent = 'Update Quick Reply Set';
-                                                            title.append(text);
-                                                        }
-                                                        dom.append(title);
-                                                    }
-                                                    const content = document.createElement('div'); {
-                                                        content.classList.add('stqrm--content');
-                                                        const actions = document.createElement('div'); {
-                                                            actionsWrap = actions;
-                                                            actions.classList.add('stqrm--actions');
-                                                            const cancel = document.createElement('div'); {
-                                                                cancel.classList.add('menu_button');
-                                                                cancel.textContent = 'Cancel';
-                                                                cancel.addEventListener('click', ()=>dlg.completeCancelled());
-                                                                actions.append(cancel);
-                                                            }
-                                                            content.append(actions);
-                                                        }
-                                                        dom.append(content);
-                                                    }
-                                                }
-                                                if (link.qrs) {
-                                                    actionsWrap.insertAdjacentElement('beforebegin', link.render(true));
-                                                    const impBtn = document.createElement('div'); {
-                                                        impBtn.classList.add('menu_button');
-                                                        impBtn.textContent = 'Update';
-                                                        impBtn.addEventListener('click', async()=>{
-                                                            const inp = /**@type {HTMLInputElement}*/(document.querySelector('#qr--set-importFile'));
-                                                            const blob = new Blob([JSON.stringify(link.data)], { type: 'application/json' });
-                                                            const file = new File([blob], `${link.data.name}.qrs.json`);
-                                                            const container = new DataTransfer();
-                                                            container.items.add(file);
-                                                            inp.files = container.files;
-                                                            inp.dispatchEvent(new Event('change', { bubbles:true }));
-                                                            const pop = document.querySelector('#shadow_popup');
-                                                            while (pop.style.display != 'block') await delay(10);
-                                                            document.querySelector('#dialogue_popup_ok').click();
-                                                            dlg.completeAffirmative();
-                                                            link.checkedOnTimestamp = Date.now();
-                                                            link.name = link.data.name;
-                                                            while (quickReplyApi.getSetByName(link.name) == link.linkedQrs) await delay(100);
-                                                            link.linkedQrs = quickReplyApi.getSetByName(link.name);
-                                                            link.updatedOnTimestamp = Date.now();
-                                                            settings.save();
-                                                        });
-                                                        actionsWrap.prepend(impBtn);
-                                                    }
-                                                } else {
-                                                    actionsWrap.insertAdjacentElement('beforebegin', link.render());
-                                                    const impBtn = document.createElement('div'); {
-                                                        impBtn.classList.add('menu_button');
-                                                        impBtn.textContent = 'Import';
-                                                        impBtn.addEventListener('click', async()=>{
-                                                            const inp = /**@type {HTMLInputElement}*/(document.querySelector('#qr--set-importFile'));
-                                                            const blob = new Blob([JSON.stringify(link.data)], { type: 'application/json' });
-                                                            const file = new File([blob], `${link.data.name}.qrs.json`);
-                                                            const container = new DataTransfer();
-                                                            container.items.add(file);
-                                                            inp.files = container.files;
-                                                            inp.dispatchEvent(new Event('change', { bubbles:true }));
-                                                            dlg.completeAffirmative();
-                                                            link.checkedOnTimestamp = Date.now();
-                                                            link.name = link.data.name;
-                                                            while (quickReplyApi.getSetByName(link.name) == link.linkedQrs) await delay(100);
-                                                            link.linkedQrs = quickReplyApi.getSetByName(link.name);
-                                                            link.updatedOnTimestamp = Date.now();
-                                                            settings.qrsLinkList.push(link);
-                                                            settings.save();
-                                                        });
-                                                        actionsWrap.prepend(impBtn);
-                                                    }
-                                                }
-                                                const dlg = new Popup(
-                                                    dom,
-                                                    POPUP_TYPE.TEXT,
-                                                );
-                                                await dlg.show();
-                                            } else {
-                                                toastr.info(`No updates for ${qrs.name}`, 'Quick Reply Manager');
-                                                link.checkedOnTimestamp = Date.now();
-                                                settings.save();
-                                            }
-                                            checked.textContent = link?.checkedOn?.toLocaleString() ?? '';
-                                            updated.textContent = link?.updatedOn?.toLocaleString() ?? '';
-                                        });
-                                        wrap.append(update);
-                                    }
-                                    const copy = document.createElement('div'); {
-                                        copy.classList.add('stqrm--action');
-                                        copy.classList.add('menu_button');
-                                        copy.classList.add('fa-solid', 'fa-fw');
-                                        copy.classList.add('fa-clipboard');
-                                        copy.title = 'Copy Quick Reply Set to clipboard';
-                                        copy.addEventListener('click', async()=>{
-                                            const value = JSON.stringify(qrs, null, '\t');
-                                            try {
-                                                navigator.clipboard.writeText(value.toString());
-                                                toastr.success(`Quick Reply Set copied to clipboard: ${qrs.name}`, 'Quick Reply Manager');
-                                            } catch {
-                                                console.warn('/copy cannot use clipboard API, falling back to execCommand');
-                                                const ta = document.createElement('textarea'); {
-                                                    ta.value = value.toString();
-                                                    ta.style.position = 'fixed';
-                                                    ta.style.inset = '0';
-                                                    document.body.append(ta);
-                                                    ta.focus();
-                                                    ta.select();
-                                                    try {
-                                                        document.execCommand('copy');
-                                                        toastr.success(`Quick Reply Set copied to clipboard: ${qrs.name}`, 'Quick Reply Manager');
-                                                    } catch (err) {
-                                                        console.error('Unable to copy to clipboard', err);
-                                                        toastr.error('Unable to copy to clipboard', 'Quick Reply Manager');
-                                                    }
-                                                    ta.remove();
-                                                }
-                                            }
-                                        });
-                                        wrap.append(copy);
-                                    }
-                                    const exp = document.createElement('div'); {
-                                        exp.classList.add('stqrm--action');
-                                        exp.classList.add('menu_button');
-                                        exp.classList.add('fa-solid', 'fa-fw');
-                                        exp.classList.add('fa-file-export');
-                                        exp.title = 'Export Quick Reply Set';
-                                        exp.addEventListener('click', async()=>{
-                                            const sel = /**@type {HTMLSelectElement} */(document.querySelector('#qr--set'));
-                                            sel.value = qrs.name;
-                                            sel.dispatchEvent(new Event('change', { bubbles:true }));
-                                            document.querySelector('#qr--set-export').click();
-                                        });
-                                        wrap.append(exp);
-                                    }
-                                    const del = document.createElement('div'); {
-                                        del.classList.add('stqrm--action');
-                                        del.classList.add('menu_button');
-                                        del.classList.add('redWarningBG');
-                                        del.classList.add('fa-solid', 'fa-fw');
-                                        del.classList.add('fa-trash-can');
-                                        del.title = 'Delete Quick Reply Set';
-                                        del.addEventListener('click', async()=>{
-                                            const confirmed = await Popup.show.confirm('Delete Quick Reply Set', `Are you sure you want to delete the Quick Reply Set "${qrs.name}"?<br>This cannot be undone.`);
-                                            if (confirmed) {
-                                                quickReplyApi.deleteSet(qrs.name);
-                                                tr.remove();
-                                            }
-                                        });
-                                        wrap.append(del);
-                                    }
-                                    actions.append(wrap);
-                                }
-                                tr.append(actions);
-                            }
-                            tbody.append(tr);
-                        }
-                    }
+                    qrsTbody = tbody;
+                    updateQrsTable();
                     tbl.append(tbody);
                 }
                 content.append(tbl);
@@ -487,10 +628,185 @@ const showManager = async()=>{
     const dlg = new Popup(
         dom,
         POPUP_TYPE.TEXT,
+        null,
+        { okButton: 'Close' },
     );
     await dlg.show();
 };
 
+
+const showSetManager = async(qrs)=>{
+    const dom = document.createElement('div'); {
+        dom.classList.add('stqrm--manager');
+        const title = document.createElement('h3'); {
+            title.textContent = `Quick Reply Set: ${qrs.name}`;
+            dom.append(title);
+        }
+    }
+    const dlg = new Popup(
+        dom,
+        POPUP_TYPE.TEXT,
+        null,
+        { okButton: 'Close' },
+    );
+    await dlg.show();
+    return dlg.result == POPUP_RESULT.AFFIRMATIVE;
+};
+
+
+const showImport = async()=>{
+    /*
+    - large / full screen dialog (no aspect ratio)
+    - URL on top with import button
+    - check if set already exists: hand over to update process (offer rename to avoid overwrite)
+    - show spinner during download
+    - show QRS settings at the top, each QR in a collapsible drawer below (default expanded)
+    - individual QRs the same: settings (label, title, context, auto-exec, etc) up top,
+    collapsible code below with hljs
+    - if accepted, run QRS import
+    - save to settings.qrsList ({ url, updatedOn, set-name })
+    - close dlg
+    */
+    /**@type {HTMLInputElement} */
+    let urlInput;
+    /**@type {HTMLElement} */
+    let actionsWrap;
+    const dom = document.createElement('div'); {
+        dom.classList.add('stqrm--importDlg');
+        const title = document.createElement('h3'); {
+            title.textContent = 'Import Quick Reply Set';
+            dom.append(title);
+        }
+        const form = document.createElement('div'); {
+            form.classList.add('stqrm--form');
+            const label = document.createElement('label'); {
+                const text = document.createElement('div'); {
+                    text.classList.add('stqrm--text');
+                    text.textContent = 'URL pointing to a Quick Reply Set JSON file:';
+                    label.append(text);
+                }
+                const inp = document.createElement('input'); {
+                    urlInput = inp;
+                    inp.classList.add('text_pole');
+                    inp.placeholder = 'URL pointing to a Quick Reply Set JSON file';
+                    inp.addEventListener('keydown', (evt)=>{
+                        if (evt.key == 'Enter' && !evt.ctrlKey && !evt.shiftKey && !evt.altKey) {
+                            submit.click();
+                        }
+                    });
+                    label.append(inp);
+                }
+                form.append(label);
+            }
+            const submit = document.createElement('div'); {
+                submit.classList.add('menu_button');
+                submit.textContent = 'Download';
+                submit.addEventListener('click', async()=>{
+                    submit.style.pointerEvents = 'none';
+                    submit.style.opacity = '0.5';
+                    content.querySelectorAll('.stqrm--qrs').forEach(it=>it.remove());
+                    const url = urlInput.value.trim();
+                    if (url.length == 0) {
+                        toastr.warning('Cannot import Quick Reply Set from a blank URL.', 'Quick Reply Manager');
+                        return;
+                    }
+                    const link = new QrsLink();
+                    link.url = url;
+                    await link.fetch();
+                    if (!link.verify()) {
+                        toastr.error(`URL does not point to a Quick Reply Set: ${url}`, 'Quick Reply Manager');
+                        return;
+                    }
+                    if (link.qrs) {
+                        toastr.warning(`Quick Reply Set with name "${link.qrs.name}" already exists.`, 'Quick Reply Manager');
+                        actionsWrap.insertAdjacentElement('beforebegin', link.render(true));
+                        const impBtn = document.createElement('div'); {
+                            impBtn.classList.add('menu_button');
+                            impBtn.textContent = 'Update';
+                            impBtn.addEventListener('click', async()=>{
+                                const inp = /**@type {HTMLInputElement}*/(document.querySelector('#qr--set-importFile'));
+                                const blob = new Blob([JSON.stringify(link.data)], { type: 'application/json' });
+                                const file = new File([blob], `${link.data.name}.qrs.json`);
+                                const container = new DataTransfer();
+                                container.items.add(file);
+                                inp.files = container.files;
+                                inp.dispatchEvent(new Event('change', { bubbles:true }));
+                                const pop = document.querySelector('#shadow_popup');
+                                while (pop.style.display != 'block') await delay(10);
+                                document.querySelector('#dialogue_popup_ok').click();
+                                dlg.completeAffirmative();
+                                link.checkedOnTimestamp = Date.now();
+                                link.name = link.data.name;
+                                const olink = settings.qrsLinkList.find(it=>it.name == link.name);
+                                while (quickReplyApi.getSetByName(link.name) == (olink ?? link).linkedQrs) await delay(100);
+                                link.linkedQrs = quickReplyApi.getSetByName(link.name);
+                                link.updatedOnTimestamp = Date.now();
+                                const idx = settings.qrsLinkList.findIndex(it=>it.url == link.url || it.qrs == link.qrs);
+                                if (idx > -1) {
+                                    settings.qrsLinkList.splice(idx, 1, link);
+                                } else {
+                                    settings.qrsLinkList.push(link);
+                                }
+                                settings.save();
+                            });
+                            actionsWrap.prepend(impBtn);
+                        }
+                        submit.style.pointerEvents = '';
+                        submit.style.opacity = '';
+                        return;
+                    }
+                    actionsWrap.insertAdjacentElement('beforebegin', link.render());
+                    const impBtn = document.createElement('div'); {
+                        impBtn.classList.add('menu_button');
+                        impBtn.textContent = 'Import';
+                        impBtn.addEventListener('click', async()=>{
+                            const inp = /**@type {HTMLInputElement}*/(document.querySelector('#qr--set-importFile'));
+                            const blob = new Blob([JSON.stringify(link.data)], { type: 'application/json' });
+                            const file = new File([blob], `${link.data.name}.qrs.json`);
+                            const container = new DataTransfer();
+                            container.items.add(file);
+                            inp.files = container.files;
+                            inp.dispatchEvent(new Event('change', { bubbles:true }));
+                            dlg.completeAffirmative();
+                            link.checkedOnTimestamp = Date.now();
+                            link.name = link.data.name;
+                            link.linkedQrs = quickReplyApi.getSetByName(link.name);
+                            link.updatedOnTimestamp = Date.now();
+                            settings.qrsLinkList.push(link);
+                            settings.save();
+                        });
+                        actionsWrap.prepend(impBtn);
+                    }
+                    submit.style.pointerEvents = '';
+                    submit.style.opacity = '';
+                });
+                form.append(submit);
+            }
+            dom.append(form);
+        }
+        const content = document.createElement('div'); {
+            content.classList.add('stqrm--content');
+            const actions = document.createElement('div'); {
+                actionsWrap = actions;
+                actions.classList.add('stqrm--actions');
+                const cancel = document.createElement('div'); {
+                    cancel.classList.add('menu_button');
+                    cancel.textContent = 'Cancel';
+                    cancel.addEventListener('click', ()=>dlg.completeCancelled());
+                    actions.append(cancel);
+                }
+                content.append(actions);
+            }
+            dom.append(content);
+        }
+    }
+    const dlg = new Popup(
+        dom,
+        POPUP_TYPE.TEXT,
+    );
+    await dlg.show();
+    return dlg.result == POPUP_RESULT.AFFIRMATIVE;
+};
 
 const addToAdders = ()=>{
     const anchor = document.querySelector('#qr--editor .qr--head .qr--actions:not(:has(.stqrm--import)) .qr--add');
@@ -500,158 +816,7 @@ const addToAdders = ()=>{
             importSetBtn.classList.add('menu_button');
             importSetBtn.classList.add('fa-solid', 'fa-cloud-arrow-down');
             importSetBtn.title = 'Import Quick Reply Set from external source';
-            importSetBtn.addEventListener('click', async()=>{
-                /*
-                - large / full screen dialog (no aspect ratio)
-                - URL on top with import button
-                - check if set already exists: hand over to update process (offer rename to avoid overwrite)
-                - show spinner during download
-                - show QRS settings at the top, each QR in a collapsible drawer below (default expanded)
-                - individual QRs the same: settings (label, title, context, auto-exec, etc) up top,
-                collapsible code below with hljs
-                - if accepted, run QRS import
-                - save to settings.qrsList ({ url, updatedOn, set-name })
-                - close dlg
-                */
-                /**@type {HTMLInputElement} */
-                let urlInput;
-                /**@type {HTMLElement} */
-                let actionsWrap;
-                const dom = document.createElement('div'); {
-                    dom.classList.add('stqrm--importDlg');
-                    const title = document.createElement('h3'); {
-                        title.textContent = 'Import Quick Reply Set';
-                        dom.append(title);
-                    }
-                    const form = document.createElement('div'); {
-                        form.classList.add('stqrm--form');
-                        const label = document.createElement('label'); {
-                            const text = document.createElement('div'); {
-                                text.classList.add('stqrm--text');
-                                text.textContent = 'URL pointing to a Quick Reply Set JSON file:';
-                                label.append(text);
-                            }
-                            const inp = document.createElement('input'); {
-                                urlInput = inp;
-                                inp.classList.add('text_pole');
-                                inp.placeholder = 'URL pointing to a Quick Reply Set JSON file';
-                                inp.addEventListener('keydown', (evt)=>{
-                                    if (evt.key == 'Enter' && !evt.ctrlKey && !evt.shiftKey && !evt.altKey) {
-                                        submit.click();
-                                    }
-                                });
-                                label.append(inp);
-                            }
-                            form.append(label);
-                        }
-                        const submit = document.createElement('div'); {
-                            submit.classList.add('menu_button');
-                            submit.textContent = 'Download';
-                            submit.addEventListener('click', async()=>{
-                                submit.style.pointerEvents = 'none';
-                                submit.style.opacity = '0.5';
-                                content.querySelectorAll('.stqrm--qrs').forEach(it=>it.remove());
-                                const url = urlInput.value.trim();
-                                if (url.length == 0) {
-                                    toastr.warning('Cannot import Quick Reply Set from a blank URL.', 'Quick Reply Manager');
-                                    return;
-                                }
-                                const link = new QrsLink();
-                                link.url = url;
-                                await link.fetch();
-                                if (!link.verify()) {
-                                    toastr.error(`URL does not point to a Quick Reply Set: ${url}`, 'Quick Reply Manager');
-                                    return;
-                                }
-                                if (link.qrs) {
-                                    toastr.warning(`Quick Reply Set with name "${link.qrs.name}" already exists.`, 'Quick Reply Manager');
-                                    actionsWrap.insertAdjacentElement('beforebegin', link.render(true));
-                                    const impBtn = document.createElement('div'); {
-                                        impBtn.classList.add('menu_button');
-                                        impBtn.textContent = 'Update';
-                                        impBtn.addEventListener('click', async()=>{
-                                            const inp = /**@type {HTMLInputElement}*/(document.querySelector('#qr--set-importFile'));
-                                            const blob = new Blob([JSON.stringify(link.data)], { type: 'application/json' });
-                                            const file = new File([blob], `${link.data.name}.qrs.json`);
-                                            const container = new DataTransfer();
-                                            container.items.add(file);
-                                            inp.files = container.files;
-                                            inp.dispatchEvent(new Event('change', { bubbles:true }));
-                                            const pop = document.querySelector('#shadow_popup');
-                                            while (pop.style.display != 'block') await delay(10);
-                                            document.querySelector('#dialogue_popup_ok').click();
-                                            dlg.completeAffirmative();
-                                            link.checkedOnTimestamp = Date.now();
-                                            link.name = link.data.name;
-                                            const olink = settings.qrsLinkList.find(it=>it.name == link.name);
-                                            while (quickReplyApi.getSetByName(link.name) == (olink ?? link).linkedQrs) await delay(100);
-                                            link.linkedQrs = quickReplyApi.getSetByName(link.name);
-                                            link.updatedOnTimestamp = Date.now();
-                                            const idx = settings.qrsLinkList.findIndex(it=>it.url == link.url || it.qrs == link.qrs);
-                                            if (idx > -1) {
-                                                settings.qrsLinkList.splice(idx, 1, link);
-                                            } else {
-                                                settings.qrsLinkList.push(link);
-                                            }
-                                            settings.save();
-                                        });
-                                        actionsWrap.prepend(impBtn);
-                                    }
-                                    submit.style.pointerEvents = '';
-                                    submit.style.opacity = '';
-                                    return;
-                                }
-                                actionsWrap.insertAdjacentElement('beforebegin', link.render());
-                                const impBtn = document.createElement('div'); {
-                                    impBtn.classList.add('menu_button');
-                                    impBtn.textContent = 'Import';
-                                    impBtn.addEventListener('click', async()=>{
-                                        const inp = /**@type {HTMLInputElement}*/(document.querySelector('#qr--set-importFile'));
-                                        const blob = new Blob([JSON.stringify(link.data)], { type: 'application/json' });
-                                        const file = new File([blob], `${link.data.name}.qrs.json`);
-                                        const container = new DataTransfer();
-                                        container.items.add(file);
-                                        inp.files = container.files;
-                                        inp.dispatchEvent(new Event('change', { bubbles:true }));
-                                        dlg.completeAffirmative();
-                                        link.checkedOnTimestamp = Date.now();
-                                        link.name = link.data.name;
-                                        link.linkedQrs = quickReplyApi.getSetByName(link.name);
-                                        link.updatedOnTimestamp = Date.now();
-                                        settings.qrsLinkList.push(link);
-                                        settings.save();
-                                    });
-                                    actionsWrap.prepend(impBtn);
-                                }
-                                submit.style.pointerEvents = '';
-                                submit.style.opacity = '';
-                            });
-                            form.append(submit);
-                        }
-                        dom.append(form);
-                    }
-                    const content = document.createElement('div'); {
-                        content.classList.add('stqrm--content');
-                        const actions = document.createElement('div'); {
-                            actionsWrap = actions;
-                            actions.classList.add('stqrm--actions');
-                            const cancel = document.createElement('div'); {
-                                cancel.classList.add('menu_button');
-                                cancel.textContent = 'Cancel';
-                                cancel.addEventListener('click', ()=>dlg.completeCancelled());
-                                actions.append(cancel);
-                            }
-                            content.append(actions);
-                        }
-                        dom.append(content);
-                    }
-                }
-                const dlg = new Popup(
-                    dom,
-                    POPUP_TYPE.TEXT,
-                );
-                await dlg.show();
-            });
+            importSetBtn.addEventListener('click', ()=>showImport());
             anchor.insertAdjacentElement('afterend', importSetBtn);
         }
         const manageBtn = document.createElement('div'); {
