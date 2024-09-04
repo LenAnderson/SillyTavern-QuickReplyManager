@@ -464,6 +464,7 @@ const makeQrsRow = (qrs)=>{
     return tr;
 };
 
+let managerDlg;
 const showManager = async()=>{
     const dom = document.createElement('div'); {
         dom.classList.add('stqrm--manager');
@@ -631,11 +632,27 @@ const showManager = async()=>{
         null,
         { okButton: 'Close' },
     );
+    managerDlg = dlg;
     await dlg.show();
 };
 
 
 const showSetManager = async(qrs)=>{
+    toastr.warning('Not implemented', 'Quick Reply Manager');
+    const sel = document.querySelector('#qr--set');
+    sel.value = qrs.name;
+    sel.dispatchEvent(new Event('change', { bubbles:true }));
+    managerDlg.completeAffirmative();
+    const icon = document.querySelector('#extensions-settings-button .drawer-icon');
+    if (icon.classList.contains('closedIcon')) {
+        icon.click();
+        if (document.querySelector('#qr--settings .fa-circle-chevron-up').classList.contains('fa-circle-chevron-down')) {
+            document.querySelector('#qr--settings .inline-drawer-toggle').click();
+        }
+        await delay(500);
+        sel.scrollIntoView();
+    }
+    return false;
     const dom = document.createElement('div'); {
         dom.classList.add('stqrm--manager');
         const title = document.createElement('h3'); {
