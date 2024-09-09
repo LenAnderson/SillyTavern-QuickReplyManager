@@ -299,3 +299,12 @@ dialog.popup:has(.stqrm--importDlg, .stqrm--manager):has(.stqrm--importDlg) .pop
   display: flex;
   gap: 0.5em;
 }
+.stqrm--manager .stqrm--qrsTable .stqrm--actions .stqrm--action {
+  transition: 200ms;
+}
+.stqrm--manager .stqrm--qrsTable .stqrm--actions .stqrm--action.stqrm--success {
+  background-color: #51a351;
+}
+.stqrm--manager .stqrm--qrsTable .stqrm--actions .stqrm--action.stqrm--failure {
+  background-color: #bd362f;
+}

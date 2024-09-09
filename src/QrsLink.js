@@ -1,5 +1,6 @@
 import { quickReplyApi } from '../../../quick-reply/index.js';
 import { QuickReplySet } from '../../../quick-reply/src/QuickReplySet.js';
+import { Dependency, getQrsData } from '../index.js';
 import { proxyFetch } from '../lib/fetch.js';
 
 export class QrsLink {
@@ -17,7 +18,7 @@ export class QrsLink {
     /**@type {number} */ checkedOnTimestamp;
     /**@type {number} */ updatedOnTimestamp;
 
-    /**@type {QuickReplySet} */ data;
+    /**@type {QuickReplySet & { dependencyList?:Dependency[]}} */ data;
     /**@type {QuickReplySet} */ linkedQrs;
 
     get checkedOn() { return new Date(this.checkedOnTimestamp); }
@@ -47,7 +48,9 @@ export class QrsLink {
 
     async checkForUpdate() {
         await this.fetch();
-        return JSON.stringify(this.data) != JSON.stringify(this.qrs);
+        const d = structuredClone(this.data);
+        delete d.dependencyList;
+        return JSON.stringify(d) != JSON.stringify(this.qrs);
     }
 
     verify() {
@@ -67,6 +70,15 @@ export class QrsLink {
                     name.classList.add('stqrm--name');
                     name.textContent = this.data.name;
                     config.append(name);
+                }
+                const deps = document.createElement('div'); {
+                    deps.classList.add('stqrm--dependency');
+                    deps.classList.add('fa-solid', 'fa-fw');
+                    if (this.data.dependencyList?.length) {
+                        deps.classList.add('fa-cubes');
+                        deps.title = this.data.dependencyList.map(d=>`${d.name}\n    /${d.commandList.join('\n    /')}`).join('\n');
+                    }
+                    config.append(deps);
                 }
                 const disableSend = document.createElement('div'); {
                     disableSend.classList.add('stqrm--checkbox');
@@ -352,7 +364,7 @@ export class QrsLink {
                             for (const a of autos) {
                                 const auto = document.createElement('div'); {
                                     auto.classList.add('stqrm--checkbox');
-                                    if (diff && oqr && oqr[a.key] != qr[a.key]) {
+                                    if (diff && oqr && oqr[a.key] != (qr[a.key] ?? false)) {
                                         const ocb = document.createElement('input'); {
                                             ocb.classList.add('stqrm--oldValue');
                                             ocb.type = 'checkbox';
@@ -368,9 +380,9 @@ export class QrsLink {
                                         }
                                     }
                                     const cb = document.createElement('input'); {
-                                        if (diff && oqr && oqr[a.key] != qr[a.key]) cb.classList.add('stqrm--newValue');
+                                        if (diff && oqr && oqr[a.key] != (qr[a.key] ?? false)) cb.classList.add('stqrm--newValue');
                                         cb.type = 'checkbox';
-                                        cb.checked = qr[a.key];
+                                        cb.checked = (qr[a.key] ?? false);
                                         cb.disabled = true;
                                         auto.append(cb);
                                     }

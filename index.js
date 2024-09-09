@@ -160,6 +160,48 @@ const updateQrsTable = ()=>{
         qrsTbody.append(makeQrsRow(qrs));
     }
 };
+
+export class Dependency {
+    /**@type {string} */ name;
+    /**@type {string} */ url;
+    /**@type {string[]} */ commandList = [];
+
+    async load() {
+        try {
+            const manifest = await (await fetch(`/scripts/extensions/third-party/${this.name}/manifest.json`)).json();
+            this.url = manifest.homePage;
+        } catch { /* empty */ }
+    }
+}
+export const getQrsData = async(qrs)=>{
+    const parser = new SlashCommandParser();
+    /**@type {QuickReplySet & { dependencyList:Dependency[]}} */
+    const data = Object.assign(
+        {
+            /**@type {Dependency[]} */
+            dependencyList: [],
+        },
+        qrs.toJSON(),
+    );
+    for (const qr of qrs.qrList) {
+        parser.parse(qr.message, false);
+        for (const cmd of parser.commandIndex) {
+            if (cmd.command?.isExtension && cmd.command?.isThirdParty) {
+                let dep = data.dependencyList.find(it=>it.name == cmd.command.source);
+                if (!dep) {
+                    dep = new Dependency();
+                    dep.name = cmd.command.source;
+                    await dep.load();
+                    data.dependencyList.push(dep);
+                }
+                if (!dep.commandList.includes(cmd.command.name)) {
+                    dep.commandList.push(cmd.command.name);
+                }
+            }
+        }
+    }
+    return data;
+};
 /**
  *
  * @param {QuickReplySet} qrs
@@ -217,6 +259,16 @@ const makeQrsRow = (qrs)=>{
                     });
                     // wrap.append(btn);
                 }
+                const deps = document.createElement('div'); {
+                    deps.classList.add('stqrm--dependency');
+                    deps.classList.add('fa-solid', 'fa-fw');
+                    wrap.append(deps);
+                }
+                getQrsData(qrs).then(data=>{
+                    if (data.dependencyList.length == 0) return;
+                    deps.classList.add('fa-cubes');
+                    deps.title = data.dependencyList.map(d=>`${d.name}\n    /${d.commandList.join('\n    /')}`).join('\n');
+                });
                 name.append(wrap);
             }
             tr.append(name);
@@ -400,10 +452,10 @@ const makeQrsRow = (qrs)=>{
                     copy.classList.add('fa-clipboard');
                     copy.title = 'Copy Quick Reply Set to clipboard';
                     copy.addEventListener('click', async()=>{
-                        const value = JSON.stringify(qrs, null, '\t');
+                        const value = JSON.stringify(await getQrsData(qrs), null, '\t');
+                        let failed = false;
                         try {
                             navigator.clipboard.writeText(value.toString());
-                            toastr.success(`Quick Reply Set copied to clipboard: ${qrs.name}`, 'Quick Reply Manager');
                         } catch {
                             console.warn('/copy cannot use clipboard API, falling back to execCommand');
                             const ta = document.createElement('textarea'); {
@@ -415,14 +467,21 @@ const makeQrsRow = (qrs)=>{
                                 ta.select();
                                 try {
                                     document.execCommand('copy');
-                                    toastr.success(`Quick Reply Set copied to clipboard: ${qrs.name}`, 'Quick Reply Manager');
                                 } catch (err) {
                                     console.error('Unable to copy to clipboard', err);
                                     toastr.error('Unable to copy to clipboard', 'Quick Reply Manager');
+                                    failed = true;
                                 }
                                 ta.remove();
                             }
                         }
+                        if (failed) {
+                            copy.classList.add('stqrm--failure');
+                        } else {
+                            copy.classList.add('stqrm--success');
+                        }
+                        await delay(1000);
+                        copy.classList.remove('stqrm--failure', 'stqrm--success');
                     });
                     wrap.append(copy);
                 }
@@ -433,10 +492,15 @@ const makeQrsRow = (qrs)=>{
                     exp.classList.add('fa-file-export');
                     exp.title = 'Export Quick Reply Set';
                     exp.addEventListener('click', async()=>{
-                        const sel = /**@type {HTMLSelectElement} */(document.querySelector('#qr--set'));
-                        sel.value = qrs.name;
-                        sel.dispatchEvent(new Event('change', { bubbles:true }));
-                        document.querySelector('#qr--set-export').click();
+                        const data = await getQrsData(qrs);
+                        const blob = new Blob([JSON.stringify(data)], { type:'application/json' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a'); {
+                            a.href = url;
+                            a.download = `${qrs.name}.qrset.json`;
+                            a.click();
+                        }
+                        URL.revokeObjectURL(url);
                     });
                     wrap.append(exp);
                 }
